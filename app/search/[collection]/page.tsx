@@ -10,7 +10,12 @@ export async function generateMetadata(props: {
   params: Promise<{ collection: string }>;
 }): Promise<Metadata> {
   const params = await props.params;
-  const collection = await getCollection(params.collection);
+  let collection = undefined;
+  try {
+    collection = await getCollection(params.collection);
+  } catch (error) {
+    console.warn('Failed to fetch collection metadata:', error);
+  }
 
   if (!collection) return notFound();
 
@@ -29,7 +34,12 @@ export default async function CategoryPage(props: {
   const params = await props.params;
   const { sort } = searchParams as { [key: string]: string };
   const { sortKey, reverse } = sorting.find((item) => item.slug === sort) || defaultSort;
-  const products = await getCollectionProducts({ collection: params.collection, sortKey, reverse });
+  let products = [] as Awaited<ReturnType<typeof getCollectionProducts>>;
+  try {
+    products = await getCollectionProducts({ collection: params.collection, sortKey, reverse });
+  } catch (error) {
+    console.warn('Failed to fetch collection products for page:', error);
+  }
 
   return (
     <section>

@@ -4,7 +4,12 @@ import { GridTileImage } from './grid/tile';
 
 export async function Carousel() {
   // Collections that start with `hidden-*` are hidden from the search page.
-  const products = await getCollectionProducts({ collection: 'hidden-homepage-carousel' });
+  let products = [] as Awaited<ReturnType<typeof getCollectionProducts>>;
+  try {
+    products = await getCollectionProducts({ collection: 'hidden-homepage-carousel' });
+  } catch (error) {
+    console.warn('Failed to fetch carousel products:', error);
+  }
 
   if (!products?.length) return null;
 
@@ -21,6 +26,7 @@ export async function Carousel() {
           >
             <Link href={`/product/${product.handle}`} className="relative h-full w-full">
               <GridTileImage
+                priority={i === 0}
                 alt={product.title}
                 label={{
                   title: product.title,

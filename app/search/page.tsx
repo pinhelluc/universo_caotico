@@ -15,7 +15,12 @@ export default async function SearchPage(props: {
   const { sort, q: searchValue } = searchParams as { [key: string]: string };
   const { sortKey, reverse } = sorting.find((item) => item.slug === sort) || defaultSort;
 
-  const products = await getProducts({ sortKey, reverse, query: searchValue });
+  let products = [] as Awaited<ReturnType<typeof getProducts>>;
+  try {
+    products = await getProducts({ sortKey, reverse, query: searchValue });
+  } catch (error) {
+    console.warn('Failed to fetch products for search page:', error);
+  }
   const resultsText = products.length > 1 ? 'results' : 'result';
 
   return (

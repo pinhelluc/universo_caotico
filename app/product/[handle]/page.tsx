@@ -16,7 +16,12 @@ export async function generateMetadata(props: {
   params: Promise<{ handle: string }>;
 }): Promise<Metadata> {
   const params = await props.params;
-  const product = await getProduct(params.handle);
+  let product = undefined;
+  try {
+    product = await getProduct(params.handle);
+  } catch (error) {
+    console.warn('Failed to fetch product metadata:', error);
+  }
 
   if (!product) return notFound();
 
@@ -51,7 +56,12 @@ export async function generateMetadata(props: {
 
 export default async function ProductPage(props: { params: Promise<{ handle: string }> }) {
   const params = await props.params;
-  const product = await getProduct(params.handle);
+  let product = undefined;
+  try {
+    product = await getProduct(params.handle);
+  } catch (error) {
+    console.warn('Failed to fetch product:', error);
+  }
 
   if (!product) return notFound();
 
@@ -111,7 +121,12 @@ export default async function ProductPage(props: { params: Promise<{ handle: str
 }
 
 async function RelatedProducts({ id }: { id: string }) {
-  const relatedProducts = await getProductRecommendations(id);
+  let relatedProducts: Awaited<ReturnType<typeof getProductRecommendations>> = [];
+  try {
+    relatedProducts = await getProductRecommendations(id);
+  } catch (error) {
+    console.warn('Failed to fetch product recommendations:', error);
+  }
 
   if (!relatedProducts.length) return null;
 

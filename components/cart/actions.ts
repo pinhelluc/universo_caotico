@@ -101,6 +101,12 @@ export async function redirectToCheckout() {
 }
 
 export async function createCartAndSetCookie() {
-  let cart = await createCart();
-  (await cookies()).set('cartId', cart.id!);
+  try {
+    const cart = await createCart();
+    if (cart?.id) {
+      (await cookies()).set('cartId', cart.id);
+    }
+  } catch (error) {
+    console.warn('Failed to create Shopify cart, skipping:', error);
+  }
 }

@@ -13,8 +13,8 @@ const { SITE_NAME } = process.env;
 export const metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: SITE_NAME!,
-    template: `%s | ${SITE_NAME}`
+    default: SITE_NAME || 'Next.js Commerce',
+    template: `%s | ${SITE_NAME || 'Next.js Commerce'}`
   },
   robots: {
     follow: true,
@@ -27,8 +27,11 @@ export default async function RootLayout({
 }: {
   children: ReactNode;
 }) {
-  // Don't await the fetch, pass the Promise to the context provider
-  const cart = getCart();
+  // fetch cart but swallow errors so the promise never rejects
+  const cart = getCart().catch((error) => {
+    console.warn('Shopify not configured or cart fetch failed:', error);
+    return undefined;
+  });
 
   return (
     <html lang="en" className={GeistSans.variable}>

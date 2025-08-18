@@ -30,7 +30,7 @@ function ThreeItemGridItem({
           priority={priority}
           alt={item.title}
           label={{
-            position: size === 'full' ? 'center' : 'bottom',
+            position: 'bottom',
             title: item.title as string,
             amount: item.priceRange.maxVariantPrice.amount,
             currencyCode: item.priceRange.maxVariantPrice.currencyCode
@@ -43,9 +43,14 @@ function ThreeItemGridItem({
 
 export async function ThreeItemGrid() {
   // Collections that start with `hidden-*` are hidden from the search page.
-  const homepageItems = await getCollectionProducts({
-    collection: 'hidden-homepage-featured-items'
-  });
+  let homepageItems: Product[] = [];
+  try {
+    homepageItems = await getCollectionProducts({
+      collection: 'hidden-homepage-featured-items'
+    });
+  } catch (error) {
+    console.warn('Failed to fetch featured homepage items:', error);
+  }
 
   if (!homepageItems[0] || !homepageItems[1] || !homepageItems[2]) return null;
 

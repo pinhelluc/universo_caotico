@@ -6,7 +6,12 @@ export default async function Image({
 }: {
   params: { collection: string };
 }) {
-  const collection = await getCollection(params.collection);
+  let collection = undefined;
+  try {
+    collection = await getCollection(params.collection);
+  } catch (error) {
+    console.warn('Failed to fetch collection for opengraph image:', error);
+  }
   const title = collection?.seo?.title || collection?.title;
 
   return await OpengraphImage({ title });

@@ -10,7 +10,12 @@ import Search, { SearchSkeleton } from './search';
 const { SITE_NAME } = process.env;
 
 export async function Navbar() {
-  const menu = await getMenu('next-js-frontend-header-menu');
+  let menu: Menu[] = [];
+  try {
+    menu = await getMenu('next-js-frontend-header-menu');
+  } catch (error) {
+    console.warn('Failed to fetch Shopify menu, using empty menu:', error);
+  }
 
   return (
     <nav className="relative flex items-center justify-between p-4 lg:px-6">

@@ -5,6 +5,7 @@ import {
 } from 'lib/constants';
 import { isShopifyError } from 'lib/type-guards';
 import { ensureStartsWith } from 'lib/utils';
+import { mockProducts, mockMenu } from 'lib/mock-data';
 import {
   revalidateTag,
   unstable_cacheTag as cacheTag,
@@ -58,11 +59,18 @@ import {
   ShopifyUpdateCartOperation
 } from './types';
 
-const domain = process.env.SHOPIFY_STORE_DOMAIN
-  ? ensureStartsWith(process.env.SHOPIFY_STORE_DOMAIN, 'https://')
-  : '';
+const domainEnv = process.env.SHOPIFY_STORE_DOMAIN || '';
+const domain = domainEnv ? ensureStartsWith(domainEnv, 'https://') : '';
 const endpoint = `${domain}${SHOPIFY_GRAPHQL_API_ENDPOINT}`;
-const key = process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN!;
+const accessToken = process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN || '';
+const key = accessToken;
+// Consider placeholders or explicit env flag to decide config status
+const isShopifyConfigured =
+  Boolean(domain && accessToken) &&
+  !domain.includes('your-store.myshopify.com') &&
+  !accessToken.includes('your_access_token_here') &&
+  process.env.DISABLE_SHOPIFY !== 'true' &&
+  process.env.MOCK_CHECKOUT !== 'true';
 
 type ExtractVariables<T> = T extends { variables: object }
   ? T['variables']
@@ -214,6 +222,19 @@ const reshapeProducts = (products: ShopifyProduct[]) => {
 };
 
 export async function createCart(): Promise<Cart> {
+  if (!isShopifyConfigured) {
+    return {
+      id: 'mock-cart',
+      checkoutUrl: '',
+      totalQuantity: 0,
+      lines: [],
+      cost: {
+        subtotalAmount: { amount: '0', currencyCode: 'USD' },
+        totalAmount: { amount: '0', currencyCode: 'USD' },
+        totalTaxAmount: { amount: '0', currencyCode: 'USD' }
+      }
+    } as Cart;
+  }
   const res = await shopifyFetch<ShopifyCreateCartOperation>({
     query: createCartMutation
   });
@@ -224,6 +245,19 @@ export async function createCart(): Promise<Cart> {
 export async function addToCart(
   lines: { merchandiseId: string; quantity: number }[]
 ): Promise<Cart> {
+  if (!isShopifyConfigured) {
+    return {
+      id: 'mock-cart',
+      checkoutUrl: '',
+      totalQuantity: 0,
+      lines: [],
+      cost: {
+        subtotalAmount: { amount: '0', currencyCode: 'USD' },
+        totalAmount: { amount: '0', currencyCode: 'USD' },
+        totalTaxAmount: { amount: '0', currencyCode: 'USD' }
+      }
+    } as Cart;
+  }
   const cartId = (await cookies()).get('cartId')?.value!;
   const res = await shopifyFetch<ShopifyAddToCartOperation>({
     query: addToCartMutation,
@@ -236,6 +270,19 @@ export async function addToCart(
 }
 
 export async function removeFromCart(lineIds: string[]): Promise<Cart> {
+  if (!isShopifyConfigured) {
+    return {
+      id: 'mock-cart',
+      checkoutUrl: '',
+      totalQuantity: 0,
+      lines: [],
+      cost: {
+        subtotalAmount: { amount: '0', currencyCode: 'USD' },
+        totalAmount: { amount: '0', currencyCode: 'USD' },
+        totalTaxAmount: { amount: '0', currencyCode: 'USD' }
+      }
+    } as Cart;
+  }
   const cartId = (await cookies()).get('cartId')?.value!;
   const res = await shopifyFetch<ShopifyRemoveFromCartOperation>({
     query: removeFromCartMutation,
@@ -251,6 +298,19 @@ export async function removeFromCart(lineIds: string[]): Promise<Cart> {
 export async function updateCart(
   lines: { id: string; merchandiseId: string; quantity: number }[]
 ): Promise<Cart> {
+  if (!isShopifyConfigured) {
+    return {
+      id: 'mock-cart',
+      checkoutUrl: '',
+      totalQuantity: 0,
+      lines: [],
+      cost: {
+        subtotalAmount: { amount: '0', currencyCode: 'USD' },
+        totalAmount: { amount: '0', currencyCode: 'USD' },
+        totalTaxAmount: { amount: '0', currencyCode: 'USD' }
+      }
+    } as Cart;
+  }
   const cartId = (await cookies()).get('cartId')?.value!;
   const res = await shopifyFetch<ShopifyUpdateCartOperation>({
     query: editCartItemsMutation,
@@ -264,6 +324,9 @@ export async function updateCart(
 }
 
 export async function getCart(): Promise<Cart | undefined> {
+  if (!isShopifyConfigured) {
+    return undefined;
+  }
   const cartId = (await cookies()).get('cartId')?.value;
 
   if (!cartId) {
@@ -289,6 +352,10 @@ export async function getCollection(
   'use cache';
   cacheTag(TAGS.collections);
   cacheLife('days');
+  
+  if (!isShopifyConfigured) {
+    return undefined;
+  }
 
   const res = await shopifyFetch<ShopifyCollectionOperation>({
     query: getCollectionQuery,
@@ -312,6 +379,10 @@ export async function getCollectionProducts({
   'use cache';
   cacheTag(TAGS.collections, TAGS.products);
   cacheLife('days');
+  
+  if (!isShopifyConfigured) {
+    return mockProducts;
+  }
 
   const res = await shopifyFetch<ShopifyCollectionProductsOperation>({
     query: getCollectionProductsQuery,
@@ -336,6 +407,20 @@ export async function getCollections(): Promise<Collection[]> {
   'use cache';
   cacheTag(TAGS.collections);
   cacheLife('days');
+  
+  if (!isShopifyConfigured) {
+    const collections = [
+      {
+        handle: '',
+        title: 'All',
+        description: 'All products',
+        seo: { title: 'All', description: 'All products' },
+        path: '/search',
+        updatedAt: new Date().toISOString()
+      }
+    ] as unknown as Collection[];
+    return collections;
+  }
 
   const res = await shopifyFetch<ShopifyCollectionsOperation>({
     query: getCollectionsQuery
@@ -367,6 +452,10 @@ export async function getMenu(handle: string): Promise<Menu[]> {
   'use cache';
   cacheTag(TAGS.collections);
   cacheLife('days');
+  
+  if (!isShopifyConfigured) {
+    return mockMenu;
+  }
 
   const res = await shopifyFetch<ShopifyMenuOperation>({
     query: getMenuQuery,
@@ -387,6 +476,9 @@ export async function getMenu(handle: string): Promise<Menu[]> {
 }
 
 export async function getPage(handle: string): Promise<Page> {
+  if (!isShopifyConfigured) {
+    return undefined as unknown as Page;
+  }
   const res = await shopifyFetch<ShopifyPageOperation>({
     query: getPageQuery,
     variables: { handle }
@@ -396,6 +488,9 @@ export async function getPage(handle: string): Promise<Page> {
 }
 
 export async function getPages(): Promise<Page[]> {
+  if (!isShopifyConfigured) {
+    return [];
+  }
   const res = await shopifyFetch<ShopifyPagesOperation>({
     query: getPagesQuery
   });
@@ -407,6 +502,10 @@ export async function getProduct(handle: string): Promise<Product | undefined> {
   'use cache';
   cacheTag(TAGS.products);
   cacheLife('days');
+  
+  if (!isShopifyConfigured) {
+    return mockProducts.find((p) => p.handle === handle);
+  }
 
   const res = await shopifyFetch<ShopifyProductOperation>({
     query: getProductQuery,
@@ -424,6 +523,10 @@ export async function getProductRecommendations(
   'use cache';
   cacheTag(TAGS.products);
   cacheLife('days');
+  
+  if (!isShopifyConfigured) {
+    return mockProducts.filter((p) => p.id !== productId).slice(0, 4);
+  }
 
   const res = await shopifyFetch<ShopifyProductRecommendationsOperation>({
     query: getProductRecommendationsQuery,
@@ -447,13 +550,17 @@ export async function getProducts({
   'use cache';
   cacheTag(TAGS.products);
   cacheLife('days');
+  
+  if (!isShopifyConfigured) {
+    return mockProducts;
+  }
 
   const res = await shopifyFetch<ShopifyProductsOperation>({
     query: getProductsQuery,
     variables: {
       query,
       reverse,
-      sortKey
+      sortKey: sortKey === 'CREATED_AT' ? 'CREATED' : sortKey
     }
   });
 
@@ -462,6 +569,9 @@ export async function getProducts({
 
 // This is called from `app/api/revalidate.ts` so providers can control revalidation logic.
 export async function revalidate(req: NextRequest): Promise<NextResponse> {
+  if (!isShopifyConfigured) {
+    return NextResponse.json({ status: 200, revalidated: false, now: Date.now() });
+  }
   // We always need to respond with a 200 status code to Shopify,
   // otherwise it will continue to retry the request.
   const collectionWebhooks = [
